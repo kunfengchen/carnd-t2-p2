@@ -68,6 +68,9 @@ public:
   ///* Sigma point spreading parameter
   double lambda_;
 
+  ///* Augmented Sigma point spreading parameter
+  double lambda_aug_;
+
   ///* the current NIS for radar
   double NIS_radar_;
 
@@ -83,6 +86,18 @@ public:
    * Destructor
    */
   virtual ~UKF();
+
+  /**
+   * Generate sigma points
+   * @param Xsig_out The generated sigma points
+   */
+  void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out);
+
+  /**
+   * Generate augmented sigma Points
+   * @param Xsig_out The generated sigma points
+  */
+  void UKF::AugmentedSigmaPoints(MatrixXd* Xsig_out);
 
   /**
    * ProcessMeasurement

@@ -52,9 +52,68 @@ UKF::UKF() {
 
   Hint: one or more values initialized above might be wildly off...
   */
+
+  n_x_ = 5;
+  n_aug_ = 7;
+  lambda_ = 3 - n_x_;
+  lambda_aug_ = 3 - n_aug_;
+
+  // new values
+  std_a_ = 0.2;
+  std_yawdd_ = 0.2;
+
+
 }
 
 UKF::~UKF() {}
+
+/**
+ * REF:
+ * https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/daf3dee8-7117-48e8-a27a-fc4769d2b954/concepts/a01da3d5-9c21-409a-b775-9b237987df46
+ * @param Xsig_out
+ */
+void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out) {
+  MatrixXd A = P.llt().matrixL();
+  // *Xsig_out = MatrixXd(n_x_, 2 * n_x_ + 1);
+
+  Xsig_out->col(0) = x_;
+
+  for (int i =0; i < n_x_; i++) {
+    Xsig_out->col(i+1) = x_  + sqrt(lambda_ +i n_x_) * A.col(i);
+    Xsig_out->col(i+1+n_x_) = x_ - sqrt(lambda_ + n_x_) * A.col(i);
+  }
+}
+
+/**
+ * REF:
+ * https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/daf3dee8-7117-48e8-a27a-fc4769d2b954/concepts/07444c9b-b4be-4615-96e1-e1b221a9add6
+ * @param Xsig_out
+ */
+void UKF::AugmentedSigmaPoints(MatrixXd* Xsig_out) {
+  VectorXd x_aug = VectorXd(n_aug_);
+  MatrixXd P_aug = MatrixXd(n_aug_, n_aug_);
+  // *Xsig_out = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+
+  // augmented mean state
+  Xsig_out->head(5) = x_;
+  Xsig_out->(5) = 0;
+  Xsig_out->(6) = 0;
+
+  // augmented covariance matrix
+  P_aug.fill(0.0);
+  P_aug.topLeftCorner(n_x_, n_x_) = P_;
+  P_aug(5, 5) = std_a_ * std_a_;
+  P_aug(6, 6) = std_yawdd_ * std_yawdd_;
+  // square root matrix
+  MatrixXd A = P_aug.llt().matrixL();
+
+  // augmented sigma points
+  Xsig_out->col(0) = x_aug;
+  for (int i = 0; i < n_aug_; i++) {
+    Xsig_out->col(i+1) = x_aug + sqrt(lambda_aug_+n_aug_) * A.col(i);
+    Xsig_out->col(i+1+n_aug_) = x_aug - sqrt(lambda_aug_+n_aug_) * A.col(i);
+  }
+}
 
 /**
  * @param {MeasurementPackage} meas_package The latest measurement data of
