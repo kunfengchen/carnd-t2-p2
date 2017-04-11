@@ -100,6 +100,33 @@ public:
   void UKF::AugmentedSigmaPoints(MatrixXd* Xsig_out);
 
   /**
+   * Sigma point prediction
+   * @param Xsig_out The prediction output
+   */
+  void UKF::SigmaPointPrediction(MatrixXd* Xsig_out);
+
+  /**
+   * Predict mean and covariance
+   * @param x_out The mean output
+   * @param P_out The covariance output
+   */
+  void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out);
+
+  /**
+   * Precit Radar Measurement
+   * @param z_out The output of the measurement
+   * @param S_out The output of the covariance
+   */
+  void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out);
+
+  /**
+   * Udate state
+   * @param x_out The state output
+   * @param P_out The covariance output
+   */
+  void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out);
+
+  /**
    * ProcessMeasurement
    * @param meas_package The latest measurement data of either radar or laser
    */

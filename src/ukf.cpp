@@ -61,7 +61,22 @@ UKF::UKF() {
   // new values
   std_a_ = 0.2;
   std_yawdd_ = 0.2;
+  std_radr_ = 0.3;
+  std_radphi_ = 0.0175;
+  std_radrd_ = 0.1;
 
+  x_ = VectorXd(n_x_);
+  P_ = MatrixXd(n_x_, n_x_);
+  Xsig_pred_ = MatrixXd(n_x_, 2*n_aug_+1);
+  weights_ = VectorXd(2*n_aug_+1);
+
+  double weight_0 = lambda/(lambda+n_aug_);
+  double weight_others = 0.5/(lambda+n_aug_);
+  weights_(0) = weight_0;
+
+  for (int i = 1; i < 2*n_aug_; i++) { // 2n+1 weights
+    weights_(i) = weight_others;
+  }
 
 }
 
@@ -113,6 +128,209 @@ void UKF::AugmentedSigmaPoints(MatrixXd* Xsig_out) {
     Xsig_out->col(i+1) = x_aug + sqrt(lambda_aug_+n_aug_) * A.col(i);
     Xsig_out->col(i+1+n_aug_) = x_aug - sqrt(lambda_aug_+n_aug_) * A.col(i);
   }
+}
+
+/**
+ * REF:
+ * https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/daf3dee8-7117-48e8-a27a-fc4769d2b954/concepts/19ab81df-0719-4e9c-8c04-236f7449261a
+ * @param Xsig_out
+ */
+void UKF::SigmaPointPrediction(MatrixXd* Xsig_out) {
+  // (*Xsig_out) = MatrixXd(n_aug_, 2*n_aug_+1);
+  MatrixXd Xsig_aug = MatrixXd(n_aug_, 2*n_aug_+1);
+  AugmentedSigmaPoints(&Xsig_aug);
+
+  MatrixXd Xsig_pred(n_x_, 2*n_aug_+1);
+  double dt = 0.1; // TODO;
+
+  // predict
+  double px, py, v, yaw, yawd, nu_a, nu_yawdd;
+  // predicted stat values
+  double px_pred, py_pred, v_pred, yaw_pred, yawd_pred;
+
+  for (int i = 0; i<2*n_aug_+1; i++) {
+    px = Xsig_aug(0, i);
+    py = Xsig_aug(1, i);
+    v = Xsig_aug(2, i);
+    yaw = Xsig_aug(3, i);
+    yawd = Xsig_aug(4, i);
+    nu_a = Xsig_aug(5, i);
+    nu_yawdd = Xsig_aug(6, i);
+
+    // avoid division by zero
+    if (fabs(yawd) > 0.001) {
+      px_pred = px + v/yawd * (sin(yaw+yawd*dt)-sin(yaw));
+      py_pred = py + v/yawd * (cos(yaw)-cos(yaw+yawd*dt));
+    } else {
+      px_pred = px + v*dt*cos(yaw);
+      py_pred = py + v*dt*sin(yaw);
+    }
+
+    v_pred = v;
+    yaw_pred = yaw + yawd*dt;
+    yawd_pred = yawd;
+
+    // add noise
+    px_pred = px_pred + 0.5*nu_a*dt*dt*cos(yaw);
+    py_pred = py_pred + 0.5*nu_a*dt*dt*sin(yaw);
+    v_pred = v_pred + nu_a*dt;
+
+    yaw_pred = yaw_pred + 0.5*nu_yawdd*dt*dt;
+    yawd_pred = yawd_pred+ nu_yawdd*dt;
+
+    // assign back to the right column
+    Xsig_pred(0, i) = px_pred;
+    Xsig_pred(1, i) = py_pred;
+    Xsig_pred(2, i) = v_pred;
+    Xsig_pred(3, i) = yaw_pred;
+    Xsig_pred(4, i) = yawd_pred;
+
+    *Xsig_out = Xsig_pred;
+  }
+
+}
+
+/**
+ * REF:
+ * https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/daf3dee8-7117-48e8-a27a-fc4769d2b954/concepts/07b59fdd-adb3-479b-8566-336332cf5f09
+ * @param x_out
+ * @param P_out
+ */
+void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out) {
+
+  // TODO
+  VectorXd x = VectorXd(n_x_);
+  MatrixXd P = MatrixXd(n_x_, n_x_);
+
+  // calculate
+  x.fill(0.0);
+  for (int i = 0; i < 2*n_aug__1; i++) {
+    x = x+weights_(i)*Xsig_pred_.col(i);
+  }
+
+  P.fill(0.0);
+  for (int i = 0; i < 2*n_aug_+1; i++) {
+    // state difference
+    VectorXd x_diff = Xsig_pred_.col(i) - x;
+    // angle normalization
+    while (x_diff(3) >  M_PI) { x_diff(3)-=2.*M_PI; }
+    while (x_diff(3) < -M_PI) { x_diff(3)+=2.*M_PI; }
+
+    P = P + weights_(i) * x_diff * x_diff.transpose();
+  }
+
+  *x_out = x;
+  *P_out = P;
+}
+
+/**
+ * REF:
+ * https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/daf3dee8-7117-48e8-a27a-fc4769d2b954/concepts/d1a4ce03-73aa-4653-b216-1c6d965fc216
+ * @param z_out
+ * @param S_out
+ */
+void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out) {
+
+  // measurement dimension for radar: r, phi, and rdot
+  int n_z = 3;
+
+  // matrix for sigma points in measurement space
+  MatrixXd Zsig = MatrixXd(n_z, 2*n_aug_+1);
+
+  // mean predicted measurement
+  VectorXd z_pred = VectorXd(n_z);
+
+  // measurement covariance matrix S
+  MatrixXd S = MatrixXd(n_z, n_z);
+
+  double px, py, v, yaw, v1, v2;
+
+  // transform sigma points into measuremnet space
+  for (int i = 0; i < 2*n_aug_+1; i++) {
+    px = Xsig_pred_(0, i);
+    py = Xsig_pred_(1, i);
+    v  = Xsig_pred_(2, i);
+    yaw = Xsig_pred_(3, i);
+    v1 = cos(yaw)*v;
+    v2 = sin(yaw)*v;
+    Zsig(0, i) = sqrt(px*px+py*py);  // r
+    Zsig(1, i) = atan2(py, px);      // phi
+    Zsig(2, i) = (px*v1+py*v2) / sqrt(px*px+py*py);  //r_dot
+  }
+
+  z_pred.fill(0.0);
+  for (int i=0; i < 2*n_aug_+1; i++) {
+    z_pred = z_pred +weights(i)*Zsig.col(i);
+  }
+
+  S.fill(0.0);
+  for (int i = 0; i<2*n_aug_+1; i++) {
+    // residual
+    VectorXd z_diff = Zsig.col(i) - z_pred;
+
+    // angle normalization
+    while (z_diff(1) > M_PI) { z_diff(1)-=2.*M_PI; }
+    while (z_diff(1) < -M_PI) { z_diff(1)+=2.*M_PI; }
+    S = S + weights_(i) * z_diff * z_diff.transpose();
+  }
+
+  MatrixXd R = MatrixXd(n_z, n_z);
+  R << std_radr_*std_radr, 0, 0,
+       0, std_radphi_*std_radphi_, 0,
+       0, 0, std_radrd_*std_radrd_;
+
+  S = S + R;
+
+  *z_out = z_pred;
+  *S_out = S;
+}
+
+/**
+ * REF:
+ * https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/daf3dee8-7117-48e8-a27a-fc4769d2b954/concepts/e19bc36c-a671-4799-8c63-cec40544c2aa
+ * @param x_out
+ * @param P_out
+ */
+void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out) {
+  // matrix for cross correlation Tc
+  MatrixXd Tc = MatrixXd(n_x_, n_z_);
+
+  Tc.fill(0.0);
+  for (int i = 0; i < 2*n_aug_+1; i++) {
+    // residaul
+    VectorXd z_diff = Zsig_.col(i) - z_pred;
+    // angle normalization
+    while (z_diff(1) > M_PI) { z_diff(1) -= 2.*M_PI; }
+    while (z_diff(1) < -M_PI) { z_diff(1) += 2.*M_PI; }
+
+    // state difference
+    VectorXd x_diff = Xsig_pred_.col(i) - x;
+
+    // angle normalization
+    while (x_diff(3) > M_PI) { x_diff(3) -= 2.*M_PI; }
+    while (x_diff(3) < -M_PI) { x_diff(3) += 2.*M_PI; }
+
+    Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
+  }
+
+  // Kalman gain K
+  MatrixXd K = Tc * S_.inverse();
+
+  // residual
+  VectorXd z_diff = z_ - z_pred_;
+
+  // angle normalization
+  while (z_diff(1) > M_PI) { z_diff(1) -= 2.*M_PI; }
+  while (z_diff(1) < -M_PI) { z_diff(1) += 2.*M_PI; }
+
+  // update state mean and covariance matrix
+
+  x_ = x_ + K * z_diff;
+  P_ = P_ - K*S*K.transpose();
+
+  *x_out = x_;
+  *P_out = P_;
+
 }
 
 /**
