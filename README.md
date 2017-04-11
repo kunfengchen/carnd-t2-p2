@@ -1,4 +1,4 @@
-# Unscented Kalman Filter Project Starter Code
+# Unscented Kalman Filter Project
 Self-Driving Car Engineer Nanodegree Program
 
 ---
@@ -17,27 +17,6 @@ Self-Driving Car Engineer Nanodegree Program
 4. Run it: `./UnscentedKF path/to/input.txt path/to/output.txt`. You can find
    some sample inputs in 'data/'.
     - eg. `./UnscentedKF ../data/sample-laser-radar-measurement-data-1.txt output.txt`
-
-## Editor Settings
-
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html) as much as possible.
-
-## Generating Additional Data
-
-This is optional!
-
-If you'd like to generate your own radar and lidar data, see the
-[utilities repo](https://github.com/udacity/CarND-Mercedes-SF-Utilities) for
-Matlab scripts that can generate additional data.
 
 ## Project Instructions and Rubric
 
