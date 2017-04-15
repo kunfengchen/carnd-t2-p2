@@ -29,11 +29,23 @@ public:
   ///* state covariance matrix
   MatrixXd P_;
 
-  ///* predicted sigma points matrix
-  MatrixXd Xsig_pred_;
+  ///* Augmented stat vector;
+  VectorXd x_aug_;
+
+  ///* Augmented state covariance matrix
+  MatrixXd P_aug_;
+
+  ///* X augmented sigma points
+  MatrixXd X_aug_sig_;
+
+  ///* predicted augmented sigma points matrix
+  MatrixXd X_aug_sig_pred_;
 
   ///* time when the state is true, in us
   long long time_us_;
+
+  ///* Keep track of timestamp
+  long long previous_timestampe_;
 
   ///* Process noise standard deviation longitudinal acceleration in m/s^2
   double std_a_;

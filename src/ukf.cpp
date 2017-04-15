@@ -46,7 +46,7 @@ UKF::UKF() {
   std_radrd_ = 0.3;
 
   /**
-  TODO:
+  DONE:
 
   Complete the initialization. See ukf.h for other member properties.
 
@@ -67,7 +67,10 @@ UKF::UKF() {
 
   x_ = VectorXd(n_x_);
   P_ = MatrixXd(n_x_, n_x_);
-  Xsig_pred_ = MatrixXd(n_x_, 2*n_aug_+1);
+  x_aug_ = VectorXd(n_aug_);
+  P_aug_ = MatrixXd(n_aug_, n_aug_);
+  X_aug_sig_ = MatrixXd(n_aug_, 2*n_aug_+1);
+  Xsig_pred_ = MatrixXd(n_x_, 2*n_aug_+1); // dimensions!!
   weights_ = VectorXd(2*n_aug_+1);
 
   double weight_0 = lambda/(lambda+n_aug_);
@@ -88,7 +91,7 @@ UKF::~UKF() {}
  * @param Xsig_out
  */
 void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out) {
-  MatrixXd A = P.llt().matrixL();
+  MatrixXd A = P_.llt().matrixL();
   // *Xsig_out = MatrixXd(n_x_, 2 * n_x_ + 1);
 
   Xsig_out->col(0) = x_;
@@ -105,8 +108,8 @@ void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out) {
  * @param Xsig_out
  */
 void UKF::AugmentedSigmaPoints(MatrixXd* Xsig_out) {
-  VectorXd x_aug = VectorXd(n_aug_);
-  MatrixXd P_aug = MatrixXd(n_aug_, n_aug_);
+  // VectorXd x_aug = VectorXd(n_aug_);
+  // MatrixXd P_aug = MatrixXd(n_aug_, n_aug_);
   // *Xsig_out = MatrixXd(n_aug_, 2 * n_aug_ + 1);
 
   // augmented mean state
@@ -115,18 +118,18 @@ void UKF::AugmentedSigmaPoints(MatrixXd* Xsig_out) {
   Xsig_out->(6) = 0;
 
   // augmented covariance matrix
-  P_aug.fill(0.0);
-  P_aug.topLeftCorner(n_x_, n_x_) = P_;
-  P_aug(5, 5) = std_a_ * std_a_;
-  P_aug(6, 6) = std_yawdd_ * std_yawdd_;
+  P_aug_.fill(0.0);
+  P_aug_.topLeftCorner(n_x_, n_x_) = P_;
+  P_aug_(5, 5) = std_a_ * std_a_;
+  P_aug_(6, 6) = std_yawdd_ * std_yawdd_;
   // square root matrix
-  MatrixXd A = P_aug.llt().matrixL();
+  MatrixXd A = P_aug_.llt().matrixL();
 
   // augmented sigma points
-  Xsig_out->col(0) = x_aug;
+  Xsig_out->col(0) = x_aug_;
   for (int i = 0; i < n_aug_; i++) {
-    Xsig_out->col(i+1) = x_aug + sqrt(lambda_aug_+n_aug_) * A.col(i);
-    Xsig_out->col(i+1+n_aug_) = x_aug - sqrt(lambda_aug_+n_aug_) * A.col(i);
+    Xsig_out->col(i+1) = x_aug_ + sqrt(lambda_aug_+n_aug_) * A.col(i);
+    Xsig_out->col(i+1+n_aug_) = x_aug_ - sqrt(lambda_aug_+n_aug_) * A.col(i);
   }
 }
 
@@ -344,6 +347,52 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   Complete this function! Make sure you switch between lidar and radar
   measurements.
   */
+
+  ///// Initialization
+  if (!is_initialized_) {
+    previous_timestampe_ = meas_package.timestamp_;
+
+    if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+      /**
+       * Convert radar from polar to cartesian coordiates and initalize state.
+       */
+       double ro = meas_package.raw_measurements_[0];
+       double theta = meas_package.raw_measurements_[1];
+       double x = ro * cos(theta);
+       double y = ro * sin(theta);
+       x_ << x, y, 0.0, 0.0, 0.0, 0.0, 0.0; //TODO
+    } else if (meas_package.sensor_type == MeasurementPackage::LASER) {
+       x_ << meas_package.raw_measurements_[0],
+             meas_package.raw_measurements_[1],
+             0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+    }
+
+    if (x_.norm() > 1e-4) {
+      // done init. no need to predict or update
+      is_initialized_ = true;
+    } else {
+      cout << "input is too small to initialied UKF." << endl;
+    }
+  }
+
+  ///// Prediction
+  // compute the time difference
+  float dt = (meas_package.timestamp_ - previous_timestampe_) / 1000000.0; // dt in seconds
+
+
+  Prediction(dt); // TODO
+
+  ///// Update
+  if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
+    // Radar update
+    UpdateRadar(meas_package);
+  } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
+    // Laser update
+    UpdateLidar(meas_package);
+  }
+
+  cout << "x_ = " << endl << x_ << endl;
+  cout << "P_ = " << endl << P_ << endl;
 }
 
 /**
@@ -358,6 +407,16 @@ void UKF::Prediction(double delta_t) {
   Complete this function! Estimate the object's location. Modify the state
   vector, x_. Predict sigma points, the state, and the state covariance matrix.
   */
+
+  /// Modify the F matrix so that the time is integrated
+  // TODO
+  // F_(0, 2) = dt;
+  // F_(1, 3) = dt;
+
+  /// Set the process covariance matrix Q
+  // TODO Q_ << ...
+
+  UKF::AugmentedSigmaPoints(&X_aug_sig_);
 }
 
 /**
