@@ -29,7 +29,7 @@ public:
   ///* state covariance matrix
   MatrixXd P_;
 
-  ///* Augmented stat vector;
+  ///* Augmented mean stat vector;
   VectorXd x_aug_;
 
   ///* Augmented state covariance matrix
@@ -41,11 +41,23 @@ public:
   ///* predicted augmented sigma points matrix
   MatrixXd X_aug_sig_pred_;
 
+  ///* Measurement augmented sigma points
+  MatrixXd Z_aug_sig_;
+
+  ///* mean predicted measurement
+  VectorXd z_pred_;
+
+  // measurement covariance matrix S
+  MatrixXd S_;
+
   ///* time when the state is true, in us
   long long time_us_;
 
   ///* Keep track of timestamp
   long long previous_timestampe_;
+
+  ///* Keep track of times difference
+  long long dt_;
 
   ///* Process noise standard deviation longitudinal acceleration in m/s^2
   double std_a_;
@@ -77,6 +89,9 @@ public:
   ///* Augmented state dimension
   int n_aug_;
 
+  ///* Measurement dimension
+  int n_z_;
+
   ///* Sigma point spreading parameter
   double lambda_;
 
@@ -100,43 +115,29 @@ public:
   virtual ~UKF();
 
   /**
-   * Generate sigma points
-   * @param Xsig_out The generated sigma points
-   */
-  void UKF::GenerateSigmaPoints(MatrixXd* Xsig_out);
-
-  /**
    * Generate augmented sigma Points
-   * @param Xsig_out The generated sigma points
   */
-  void UKF::AugmentedSigmaPoints(MatrixXd* Xsig_out);
+  void UKF::AugmentedSigmaPoints();
 
   /**
    * Sigma point prediction
-   * @param Xsig_out The prediction output
    */
-  void UKF::SigmaPointPrediction(MatrixXd* Xsig_out);
+  void UKF::SigmaPointPrediction();
 
   /**
    * Predict mean and covariance
-   * @param x_out The mean output
-   * @param P_out The covariance output
    */
-  void UKF::PredictMeanAndCovariance(VectorXd* x_out, MatrixXd* P_out);
+  void UKF::PredictMeanAndCovariance();
 
   /**
    * Precit Radar Measurement
-   * @param z_out The output of the measurement
-   * @param S_out The output of the covariance
    */
-  void UKF::PredictRadarMeasurement(VectorXd* z_out, MatrixXd* S_out);
+  void UKF::PredictRadarMeasurement();
 
   /**
-   * Udate state
-   * @param x_out The state output
-   * @param P_out The covariance output
+   * Update state
    */
-  void UKF::UpdateState(VectorXd* x_out, MatrixXd* P_out);
+  void UKF::UpdateState();
 
   /**
    * ProcessMeasurement
