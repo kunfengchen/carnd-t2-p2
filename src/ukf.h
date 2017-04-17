@@ -44,6 +44,10 @@ public:
   ///* Measurement augmented sigma points
   MatrixXd Z_aug_sig_;
 
+
+  // The mesasurement from sensor
+  VectorXd z_;
+
   ///* mean predicted measurement
   VectorXd z_pred_;
 
@@ -117,27 +121,27 @@ public:
   /**
    * Generate augmented sigma Points
   */
-  void UKF::AugmentedSigmaPoints();
+  void AugmentedSigmaPoints();
 
   /**
    * Sigma point prediction
    */
-  void UKF::SigmaPointPrediction();
+  void SigmaPointPrediction();
 
   /**
    * Predict mean and covariance
    */
-  void UKF::PredictMeanAndCovariance();
+  void PredictMeanAndCovariance();
 
   /**
    * Precit Radar Measurement
    */
-  void UKF::PredictRadarMeasurement();
+  void PredictRadarMeasurement();
 
   /**
    * Update state
    */
-  void UKF::UpdateState();
+  void UpdateState();
 
   /**
    * ProcessMeasurement

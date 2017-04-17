@@ -75,7 +75,7 @@ UKF::UKF() {
   P_aug_ = MatrixXd(n_aug_, n_aug_);
   X_aug_sig_ = MatrixXd(n_aug_, 2*n_aug_+1);
   X_aug_sig_pred_ = MatrixXd(n_x_, 2*n_aug_+1); // dimensions!!
-  Z_aug_sig_ = MatrixXd(n_z_, 2*n_aug_+1_);
+  Z_aug_sig_ = MatrixXd(n_z_, 2*n_aug_+1);
   dt_ = 0;
 
   weights_ = VectorXd(2*n_aug_+1);
@@ -101,9 +101,9 @@ UKF::~UKF() {}
 void UKF::AugmentedSigmaPoints() {
 
   // augmented mean state
-  x_aug_->head(5) = x_;
-  x_aug_->(5) = 0;
-  x_aug_->(6) = 0;
+  x_aug_.head(5) = x_;
+  x_aug_(5) = 0;
+  x_aug_(6) = 0;
 
   // augmented covariance matrix
   P_aug_.fill(0.0);
@@ -308,7 +308,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
        double x = ro * cos(theta);
        double y = ro * sin(theta);
        x_ << x, y, 0.0, 0.0, 0.0, 0.0, 0.0; //TODO
-    } else if (meas_package.sensor_type == MeasurementPackage::LASER) {
+    } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
        x_ << meas_package.raw_measurements_[0],
              meas_package.raw_measurements_[1],
              0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
@@ -326,6 +326,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   // compute the time difference
   dt_ = (meas_package.timestamp_ - previous_timestampe_) / 1000000.0; // dt in seconds
 
+  z_ = meas_package.raw_measurements_;
 
   Prediction(dt_);
 
@@ -338,6 +339,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     UpdateLidar(meas_package);
   }
 
+  UpdateState();
+
   cout << "x_ = " << endl << x_ << endl;
   cout << "P_ = " << endl << P_ << endl;
 }
@@ -349,21 +352,15 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
  */
 void UKF::Prediction(double delta_t) {
   /**
-  TODO:
+  DONE:
 
   Complete this function! Estimate the object's location. Modify the state
   vector, x_. Predict sigma points, the state, and the state covariance matrix.
   */
 
-  /// Modify the F matrix so that the time is integrated
-  // TODO
-  // F_(0, 2) = dt;
-  // F_(1, 3) = dt;
-
-  /// Set the process covariance matrix Q
-  // TODO Q_ << ...
-
-  UKF::AugmentedSigmaPoints(&X_aug_sig_);
+  AugmentedSigmaPoints();
+  SigmaPointPrediction();
+  PredictMeanAndCovariance();
 }
 
 /**
@@ -387,11 +384,12 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
  */
 void UKF::UpdateRadar(MeasurementPackage meas_package) {
   /**
-  TODO:
+  DONE:
 
   Complete this function! Use radar data to update the belief about the object's
   position. Modify the state vector, x_, and covariance, P_.
 
   You'll also need to calculate the radar NIS.
   */
+  PredictRadarMeasurement();
 }
