@@ -53,6 +53,9 @@ UKF::UKF() {
   Hint: one or more values initialized above might be wildly off...
   */
 
+  is_initialized_ = false;
+  previous_timestampe_ = 0;
+
   n_x_ = 5;
   n_aug_ = 7;
   // measurement dimension for radar: r, phi, and rdot
@@ -68,6 +71,7 @@ UKF::UKF() {
   std_radr_ = 0.3;
   std_radphi_ = 0.0175;
   std_radrd_ = 0.1;
+  dt_ = 0;
 
   x_ = VectorXd(n_x_);
   P_ = MatrixXd(n_x_, n_x_);
@@ -76,7 +80,21 @@ UKF::UKF() {
   X_aug_sig_ = MatrixXd(n_aug_, 2*n_aug_+1);
   X_aug_sig_pred_ = MatrixXd(n_x_, 2*n_aug_+1); // dimensions!!
   Z_aug_sig_ = MatrixXd(n_z_, 2*n_aug_+1);
-  dt_ = 0;
+
+  R_laser_ = MatrixXd(2, 2);
+  H_laser_ = MatrixXd(2, 5);
+
+  P_ << 1, 0, 0, 0, 0,
+        0, 1, 0, 0, 0,
+        0, 0, 1, 0, 0,
+        0, 0, 0, 1, 0,
+        0, 0, 0, 0, 1;
+
+  R_laser_ << 0.0225, 0,
+          0, 0.0225;
+
+  H_laser_ << 1, 0, 0, 0, 0,
+              0, 1, 0, 0, 0;
 
   weights_ = VectorXd(2*n_aug_+1);
   double weight_0 = lambda_aug_/(lambda_aug_+n_aug_);
@@ -87,9 +105,11 @@ UKF::UKF() {
   }
 
   // mean predicted measurement
-  z_pred_ = VectorXd(n_z_);
+  z_laser_pred_ = VectorXd(2);
+  z_radar_pred_ = VectorXd(n_z_);
+
   //measurement covariance matrix S
-  S_ = MatrixXd(n_z_,n_z_);
+  S_radar_ = MatrixXd(n_z_,n_z_);
 }
 
 UKF::~UKF() {}
@@ -201,7 +221,6 @@ void UKF::PredictMeanAndCovariance() {
  */
 void UKF::PredictRadarMeasurement() {
   double px, py, v, yaw, v1, v2;
-
   // transform sigma points into measuremnet space
   for (int i = 0; i < 2*n_aug_+1; i++) {
     px = X_aug_sig_pred_(0, i);
@@ -215,20 +234,20 @@ void UKF::PredictRadarMeasurement() {
     Z_aug_sig_(2, i) = (px*v1+py*v2) / sqrt(px*px+py*py);  //r_dot
   }
 
-  z_pred_.fill(0.0);
+  z_radar_pred_.fill(0.0);
   for (int i=0; i < 2*n_aug_+1; i++) {
-    z_pred_ = z_pred_ +weights_(i)*Z_aug_sig_.col(i);
+    z_radar_pred_ = z_radar_pred_ +weights_(i)*Z_aug_sig_.col(i);
   }
 
-  S_.fill(0.0);
+  S_radar_.fill(0.0);
   for (int i = 0; i<2*n_aug_+1; i++) {
     // residual
-    VectorXd z_diff = Z_aug_sig_.col(i) - z_pred_;
+    VectorXd z_diff = Z_aug_sig_.col(i) - z_radar_pred_;
 
     // angle normalization
     while (z_diff(1) > M_PI) { z_diff(1)-=2.*M_PI; }
     while (z_diff(1) < -M_PI) { z_diff(1)+=2.*M_PI; }
-    S_ = S_ + weights_(i) * z_diff * z_diff.transpose();
+    S_radar_ = S_radar_ + weights_(i) * z_diff * z_diff.transpose();
   }
 
   MatrixXd R = MatrixXd(n_z_, n_z_);
@@ -236,23 +255,22 @@ void UKF::PredictRadarMeasurement() {
        0, std_radphi_*std_radphi_, 0,
        0, 0, std_radrd_*std_radrd_;
 
-  S_ = S_ + R;
+  S_radar_ = S_radar_ + R;
 }
 
 /**
  * REF:
  * https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/daf3dee8-7117-48e8-a27a-fc4769d2b954/concepts/e19bc36c-a671-4799-8c63-cec40544c2aa
  */
-void UKF::UpdateState() {
+void UKF::UpdateRadarState() {
 
-  // TODO z
   // matrix for cross correlation Tc
   MatrixXd Tc = MatrixXd(n_x_, n_z_);
 
   Tc.fill(0.0);
   for (int i = 0; i < 2*n_aug_+1; i++) {
     // residaul
-    VectorXd z_diff = Z_aug_sig_.col(i) - z_pred_;
+    VectorXd z_diff = Z_aug_sig_.col(i) - z_radar_pred_;
     // angle normalization
     while (z_diff(1) > M_PI) { z_diff(1) -= 2.*M_PI; }
     while (z_diff(1) < -M_PI) { z_diff(1) += 2.*M_PI; }
@@ -268,10 +286,10 @@ void UKF::UpdateState() {
   }
 
   // Kalman gain K
-  MatrixXd K = Tc * S_.inverse();
+  MatrixXd K = Tc * S_radar_.inverse();
 
   // residual
-  VectorXd z_diff = z_ - z_pred_;
+  VectorXd z_diff = z_radar_ - z_radar_pred_;
 
   // angle normalization
   while (z_diff(1) > M_PI) { z_diff(1) -= 2.*M_PI; }
@@ -280,7 +298,7 @@ void UKF::UpdateState() {
   // update state mean and covariance matrix
 
   x_ = x_ + K * z_diff;
-  P_ = P_ - K*S_*K.transpose();
+  P_ = P_ - K*S_radar_*K.transpose();
 }
 
 /**
@@ -289,7 +307,7 @@ void UKF::UpdateState() {
  */
 void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   /**
-  TODO:
+  DONE:
 
   Complete this function! Make sure you switch between lidar and radar
   measurements.
@@ -307,11 +325,11 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
        double theta = meas_package.raw_measurements_[1];
        double x = ro * cos(theta);
        double y = ro * sin(theta);
-       x_ << x, y, 0.0, 0.0, 0.0, 0.0, 0.0; //TODO
+       x_ << x, y, 0.0, 0.0, 0.0; //TODO
     } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
        x_ << meas_package.raw_measurements_[0],
              meas_package.raw_measurements_[1],
-             0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+             0.0, 0.0, 0.0;
     }
 
     if (x_.norm() > 1e-4) {
@@ -326,8 +344,6 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
   // compute the time difference
   dt_ = (meas_package.timestamp_ - previous_timestampe_) / 1000000.0; // dt in seconds
 
-  z_ = meas_package.raw_measurements_;
-
   Prediction(dt_);
 
   ///// Update
@@ -338,8 +354,6 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     // Laser update
     UpdateLidar(meas_package);
   }
-
-  UpdateState();
 
   cout << "x_ = " << endl << x_ << endl;
   cout << "P_ = " << endl << P_ << endl;
@@ -376,6 +390,20 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
 
   You'll also need to calculate the lidar NIS.
   */
+
+  z_laser_ = meas_package.raw_measurements_;
+  z_laser_pred_ = H_laser_ * x_;
+  VectorXd y = z_laser_ - z_laser_pred_;
+  MatrixXd Ht = H_laser_.transpose();
+  MatrixXd S = H_laser_ * P_ * Ht + R_laser_;
+  MatrixXd Si = S.inverse();
+  MatrixXd PHt = P_ * Ht;
+  MatrixXd K = PHt * Si;
+
+  //new estimate
+  x_ = x_ + (K * y);
+  MatrixXd I = MatrixXd::Identity(n_x_, n_x_);
+  P_ = (I - K * H_laser_) * P_;
 }
 
 /**
@@ -391,5 +419,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
   You'll also need to calculate the radar NIS.
   */
+  z_radar_ = meas_package.raw_measurements_;
   PredictRadarMeasurement();
+  UpdateRadarState();
 }

@@ -45,14 +45,22 @@ public:
   MatrixXd Z_aug_sig_;
 
 
-  // The mesasurement from sensor
-  VectorXd z_;
+  ///* The mesasurement from sensor
+  VectorXd z_laser_;
+  VectorXd z_radar_;
 
   ///* mean predicted measurement
-  VectorXd z_pred_;
+  VectorXd z_laser_pred_;
+  VectorXd z_radar_pred_;
 
-  // measurement covariance matrix S
-  MatrixXd S_;
+  ///* measurement covariance matrix S
+  MatrixXd S_radar_;
+
+  ///* laser measurement covariance matrix
+  MatrixXd R_laser_;
+
+  ///* laser measurement matrix
+  MatrixXd H_laser_;
 
   ///* time when the state is true, in us
   long long time_us_;
@@ -139,9 +147,9 @@ public:
   void PredictRadarMeasurement();
 
   /**
-   * Update state
+   * Update radar state
    */
-  void UpdateState();
+  void UpdateRadarState();
 
   /**
    * ProcessMeasurement
