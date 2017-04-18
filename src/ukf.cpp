@@ -66,8 +66,8 @@ UKF::UKF() {
   // new values
   /// std_a_ = 2.5; // 0.8 // from slack
   /// std_yawdd_ = 2.0; // 0.6 // from slack
-  std_a_ = 0.2;
-  std_yawdd_ = 0.2;
+  std_a_ = 0.02;
+  std_yawdd_ = 0.02;
   std_radr_ = 0.3;
   std_radphi_ = 0.0175;
   std_radrd_ = 0.1;
@@ -222,11 +222,11 @@ void UKF::PredictMeanAndCovariance() {
   ///      << "x_:" << endl << x_ << endl;
 
   P_.fill(0.0);
-  /// KFC for (int i = 0; i < 2*n_aug_+1; i++) {
-  for (int i = 1; i < 2*n_aug_+1; i++) {
+  for (int i = 0; i < 2*n_aug_+1; i++) {
+  ///TODO for (int i = 1; i < 2*n_aug_+1; i++) {
     // state difference
-    /// KFC VectorXd x_diff = X_aug_sig_pred_.col(i) - x_;
-    VectorXd x_diff = X_aug_sig_pred_.col(i) - X_aug_sig_pred_.col(0);
+    VectorXd x_diff = X_aug_sig_pred_.col(i) - x_;
+    ///TODO VectorXd x_diff = X_aug_sig_pred_.col(i) - X_aug_sig_pred_.col(0);
     // cout << "x_diff: " << endl << x_diff << endl;
 
     // angle normalization
@@ -308,7 +308,7 @@ void UKF::UpdateRadarState() {
 
     // state difference
     VectorXd x_diff = X_aug_sig_pred_.col(i) - x_;
-    /// VectorXd x_diff = X_aug_sig_pred_.col(i) - X_aug_sig_pred_.col(0);
+    /// TODO VectorXd x_diff = X_aug_sig_pred_.col(i) - X_aug_sig_pred_.col(0);
 
     // angle normalization
     x_diff(3) = atan2(sin(x_diff(3)),cos(x_diff(3)));
@@ -379,26 +379,21 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     }
 
     // Done initializing, no need to predict and update
-    is_initialized_ = true;
+    // TODO is_initialized_ = true;
+    // return;
 
-    return;
-    /*
     if (x_.norm() > 1e-4) {
       // done init. no need to predict or update
       is_initialized_ = true;
     } else {
-      cout << "input is too small to initialied UKF." << endl;
+      cout << "********* input is too small to initialied UKF." << endl;
     }
-     */
+    return;
   }
 
   ///// Prediction
   // compute the time difference
   dt_ = (meas_package.timestamp_ - previous_timestampe_) / 1000000.0; // dt in seconds
-  // if (dt_ < 0.001) {
-  //   dt_ = 0.001;
-  // }
-  // TODO
   previous_timestampe_ = meas_package.timestamp_;
 
   Prediction(dt_);
