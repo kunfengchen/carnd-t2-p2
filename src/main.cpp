@@ -26,9 +26,9 @@ void check_arguments(int argc, char* argv[]) {
     cerr << usage_instructions << endl;
   } else if (argc == 2) {
     cerr << "Please include an output file.\n" << usage_instructions << endl;
-  } else if (argc == 3) {
+  } else if (argc == 3 || argc == 4) {
     has_valid_args = true;
-  } else if (argc > 3) {
+  } else if (argc > 4) {
     cerr << "Too many arguments.\n" << usage_instructions << endl;
   }
 
@@ -62,14 +62,32 @@ int main(int argc, char* argv[]) {
 
   check_files(in_file_, in_file_name_, out_file_, out_file_name_);
 
+  UKF::ProcessMode mode = UKF::BOTH;
+
+  int mode_i = 0;
+
+  if (argc > 3) {
+    mode_i = stod(argv[3]);
+    // 0=BOTH, 1=LASER_ONLY, 2=RADAR_ONLY
+    switch(mode_i) {
+      case 0:
+        mode = UKF::BOTH;
+            break;
+      case 1:
+        mode = UKF::LASER_ONLY;
+            break;
+      case 2:
+        mode = UKF::RADAR_ONLY;
+            break;
+    }
+  }
+
   /**********************************************
    *  Set Measurements                          *
    **********************************************/
 
   vector<MeasurementPackage> measurement_pack_list;
   vector<GroundTruthPackage> gt_pack_list;
-
-  UKF::ProcessMode mode = UKF::LASER_ONLY;
 
   string line;
 
@@ -89,7 +107,7 @@ int main(int argc, char* argv[]) {
       // laser measurement
 
       if (mode == UKF::RADAR_ONLY) {
-        cout << "skip LASER measure" << endl;
+        /// cout << "skip LASER measure" << endl;
         continue;
       }
 
@@ -108,7 +126,7 @@ int main(int argc, char* argv[]) {
       // radar measurement
 
       if (mode == UKF::LASER_ONLY) {
-        cout << "skip RADAR measure" << endl;
+        /// cout << "skip RADAR measure" << endl;
         continue;
       }
 
@@ -167,11 +185,9 @@ int main(int argc, char* argv[]) {
   out_file_ << "vy_true" << "\t";
   out_file_ << "NIS" << "\n";
 
-  ukf.process_mode_ = UKF::RADAR_ONLY;
-
   for (size_t k = 0; k < number_of_measurements; ++k) {
     // Call the UKF-based fusion
-      cout << "process mesasurement: " << k << endl;
+    /// cout << "process mesasurement: " << k << endl;
     ukf.ProcessMeasurement(measurement_pack_list[k]);
 
     // output the estimation
