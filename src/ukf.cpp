@@ -67,7 +67,7 @@ UKF::UKF() {
   /// std_a_ = 2.5; // 0.8 // from slack
   /// std_yawdd_ = 2.0; // 0.6 // from slack
   std_a_ = 0.2;
-  std_yawdd_ = 0.2;
+  std_yawdd_ = 0.02; // 0.2
   std_radr_ = 0.3;
   std_radphi_ = 0.0175;
   std_radrd_ = 0.1;
@@ -84,11 +84,11 @@ UKF::UKF() {
   R_laser_ = MatrixXd(2, 2);
   H_laser_ = MatrixXd(2, 5);
 
-  P_ << 1, 0, 0, 0, 0,
-        0, 1, 0, 0, 0,
-        0, 0, 1, 0, 0,
-        0, 0, 0, 1, 0,
-        0, 0, 0, 0, 1;
+  P_ << 0.2, 0, 0, 0, 0,
+        0, 0.2, 0, 0, 0,
+        0, 0, 0.2, 0, 0,
+        0, 0, 0, 0.2, 0,
+        0, 0, 0, 0, 0.2;
 
   R_laser_ << 0.0225, 0,
           0, 0.0225;
@@ -240,7 +240,7 @@ void UKF::PredictMeanAndCovariance() {
  */
 void UKF::PredictRadarMeasurement() {
   double px, py, v, yaw, v1, v2;
-  // transform sigma points into measuremnet space
+  // transform sigma points into measurement space
   for (int i = 0; i < 2*n_aug_+1; i++) {
     px = X_aug_sig_pred_(0, i);
     py = X_aug_sig_pred_(1, i);
