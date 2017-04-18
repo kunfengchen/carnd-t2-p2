@@ -69,6 +69,8 @@ int main(int argc, char* argv[]) {
   vector<MeasurementPackage> measurement_pack_list;
   vector<GroundTruthPackage> gt_pack_list;
 
+  UKF::ProcessMode mode = UKF::LASER_ONLY;
+
   string line;
 
   // prep the measurement packages (each line represents a measurement at a
@@ -86,6 +88,11 @@ int main(int argc, char* argv[]) {
     if (sensor_type.compare("L") == 0) {
       // laser measurement
 
+      if (mode == UKF::RADAR_ONLY) {
+        cout << "skip LASER measure" << endl;
+        continue;
+      }
+
       // read measurements at this timestamp
       meas_package.sensor_type_ = MeasurementPackage::LASER;
       meas_package.raw_measurements_ = VectorXd(2);
@@ -99,6 +106,11 @@ int main(int argc, char* argv[]) {
       measurement_pack_list.push_back(meas_package);
     } else if (sensor_type.compare("R") == 0) {
       // radar measurement
+
+      if (mode == UKF::LASER_ONLY) {
+        cout << "skip RADAR measure" << endl;
+        continue;
+      }
 
       // read measurements at this timestamp
       meas_package.sensor_type_ = MeasurementPackage::RADAR;
@@ -155,9 +167,11 @@ int main(int argc, char* argv[]) {
   out_file_ << "vy_true" << "\t";
   out_file_ << "NIS" << "\n";
 
+  ukf.process_mode_ = UKF::RADAR_ONLY;
 
   for (size_t k = 0; k < number_of_measurements; ++k) {
     // Call the UKF-based fusion
+      cout << "process mesasurement: " << k << endl;
     ukf.ProcessMeasurement(measurement_pack_list[k]);
 
     // output the estimation

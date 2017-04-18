@@ -103,6 +103,7 @@ UKF::UKF() {
   for (int i = 1; i < 2*n_aug_+1; i++) { // 2n+1 weights
     weights_(i) = weight_others;
   }
+  cout << "weights_: " << endl << weights_ << endl;
 
   // mean predicted measurement
   z_laser_pred_ = VectorXd(2);
@@ -110,6 +111,8 @@ UKF::UKF() {
 
   //measurement covariance matrix S
   S_radar_ = MatrixXd(n_z_,n_z_);
+
+  process_mode_ = UKF::BOTH;
 }
 
 UKF::~UKF() {}
@@ -189,6 +192,10 @@ void UKF::SigmaPointPrediction() {
     X_aug_sig_pred_(4, i) = yawd_pred;
   }
 
+  cout << "SigmaPointPrediction(): " << endl;
+  cout << "X_aug_sig_: " << endl << X_aug_sig_ << endl;
+  cout << "X_aug_sig_pred_: " << endl << X_aug_sig_pred_ << endl;
+
 }
 
 /**
@@ -203,13 +210,25 @@ void UKF::PredictMeanAndCovariance() {
     x_ = x_+weights_(i)*X_aug_sig_pred_.col(i);
   }
 
+  cout << "PredictMeanAndCovariance():" << endl
+       << "Xaug_sig_pre_:" << endl << X_aug_sig_pred_ << endl
+       << "x_:" << endl << x_ << endl;
+
   P_.fill(0.0);
   for (int i = 0; i < 2*n_aug_+1; i++) {
     // state difference
     VectorXd x_diff = X_aug_sig_pred_.col(i) - x_;
+    // cout << "x_diff: " << endl << x_diff << endl;
+
     // angle normalization
-    while (x_diff(3) >  M_PI) { x_diff(3)-=2.*M_PI; }
-    while (x_diff(3) < -M_PI) { x_diff(3)+=2.*M_PI; }
+    while (x_diff(3) >  M_PI) {
+      x_diff(3)-=2.*M_PI;
+      // cout << "x_diff(3)1: " << i << ": " << x_diff(3) << endl;
+    }
+    while (x_diff(3) < -M_PI) {
+      x_diff(3)+=2.*M_PI;
+      // cout << "x_diff(3)2: " << i << ": " << x_diff(3) << endl;
+    }
 
     P_ = P_ + weights_(i) * x_diff * x_diff.transpose();
   }
@@ -332,12 +351,23 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
              0.0, 0.0, 0.0;
     }
 
+    if (x_(0) == 0.0 && x_(1) == 0.0) {
+      x_(0) = 0.0001;
+      x_(1) = 0.0001;
+    }
+
+    // Done initializing, no need to predict and update
+    is_initialized_ = true;
+
+    return;
+    /*
     if (x_.norm() > 1e-4) {
       // done init. no need to predict or update
       is_initialized_ = true;
     } else {
       cout << "input is too small to initialied UKF." << endl;
     }
+     */
   }
 
   ///// Prediction
@@ -355,6 +385,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     UpdateLidar(meas_package);
   }
 
+    cout << "After process measurement: " << endl;
   cout << "x_ = " << endl << x_ << endl;
   cout << "P_ = " << endl << P_ << endl;
 }

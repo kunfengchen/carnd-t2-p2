@@ -116,6 +116,13 @@ public:
   ///* the current NIS for laser
   double NIS_laser_;
 
+  ///* process mode
+  enum ProcessMode {
+    BOTH,
+    LASER_ONLY,
+    RADAR_ONLY
+  } process_mode_ ;
+
   /**
    * Constructor
    */
