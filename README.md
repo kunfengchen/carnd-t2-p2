@@ -14,9 +14,14 @@ Self-Driving Car Engineer Nanodegree Program
 1. Clone this repo.
 2. Make a build directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
-4. Run it: `./UnscentedKF path/to/input.txt path/to/output.txt`. You can find
+4. Run it: `./UnscentedKF path/to/input.txt path/to/output.txt [mode]`
+
+   mode is optional 0, 1, or 2. 0=Use both laser and radar (default), 1=Laser only, 2=Radar only
+   You can find
    some sample inputs in 'data/'.
     - eg. `./UnscentedKF ../data/sample-laser-radar-measurement-data-1.txt output.txt`
+    - eg. `./UnscentedKF ../data/sample-laser-radar-measurement-data-1.txt output.txt 1`
+    - eg. `./UnscentedKF ../data/sample-laser-radar-measurement-data-1.txt output.txt 2`
 
 ## Project Instructions and Rubric
 
