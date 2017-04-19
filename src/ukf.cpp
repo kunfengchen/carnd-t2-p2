@@ -64,14 +64,8 @@ UKF::UKF() {
   lambda_aug_ = 3 - n_aug_;
 
   // new values
-  /// std_a_ = 2.5; // 0.8 // from slack
-  /// std_yawdd_ = 2.0; // 0.6 // from slack
-  std_a_ = 0.45; // 0.02;
-  std_yawdd_ = 0.55; // 0.02;
-  // std_radr_ = 0.3;
-  // std_radphi_ = 0.0175;
-  // std_radrd_ = 0.1;
-  dt_ = 0.01;
+  std_a_ = 0.85;
+  std_yawdd_ = 0.65;
 
   x_ = VectorXd(n_x_);
   P_ = MatrixXd(n_x_, n_x_);
@@ -393,7 +387,8 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
        double rhod = meas_package.raw_measurements_[2];
        double x = rho * cos(phi);
        double y = rho * sin(phi);
-       x_ << x, y, rhod, phi, 0.0;
+       /// x_ << x, y, rhod, phi, 0.0;  // not exact the same
+       x_ << x, y, 0.0, 0.0, 0.0;
     } else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
        x_ << meas_package.raw_measurements_[0],
              meas_package.raw_measurements_[1],
@@ -488,7 +483,9 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   /// cout << "y= " << endl << y << endl;
   /// cout << "K= " << endl << K << endl;
   // update NIS
-  // TODO NIS_laser_ = (meas_package.raw_measurements_-z_pred).transpose()*S.inverse()*(meas_package.raw_measurements_-z_pred);
+  NIS_laser_ = (z_laser_ - z_laser_pred_).transpose()
+               *S.inverse()
+               *(z_laser_ - z_laser_pred_);
 }
 
 /**
@@ -507,4 +504,8 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
   z_radar_ = meas_package.raw_measurements_;
   PredictRadarMeasurement();
   UpdateRadarState();
+  // update NIS
+  NIS_radar_ = (z_radar_ - z_radar_pred_).transpose()
+               *S_radar_.inverse()
+               *(z_radar_ - z_radar_pred_);
 }
