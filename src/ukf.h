@@ -38,8 +38,8 @@ public:
   ///* X augmented sigma points
   MatrixXd X_aug_sig_;
 
-  ///* predicted augmented sigma points matrix
-  MatrixXd X_aug_sig_pred_;
+  ///* predicted sigma points matrix
+  MatrixXd X_sig_pred_;
 
   ///* Measurement augmented sigma points
   MatrixXd Z_aug_sig_;
@@ -69,7 +69,7 @@ public:
   long long previous_timestampe_;
 
   ///* Keep track of times difference
-  long long dt_;
+  float dt_;
 
   ///* Process noise standard deviation longitudinal acceleration in m/s^2
   double std_a_;
